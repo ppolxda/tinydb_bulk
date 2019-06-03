@@ -66,7 +66,8 @@ class TestMathFunc(unittest.TestCase):
 
         for i in range(self.RANGE_COUNT):
             table.upsert_one(
-                {'i': i}, {'$set': {'i': i, 'a': i % 2, 'b': i * 2}}
+                {'i': i},
+                {'$set': {'i': i, 'a': i % 2, 'b': i * 2}}
             )
 
         interval = time.time() - start
