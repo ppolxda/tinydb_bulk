@@ -1,0 +1,16 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.doubanio.com/simple"
+verify_ssl = true
+
+[dev-packages]
+pep8 = "*"
+pylint = "*"
+autopep8 = "*"
+pytest = "*"
+
+[packages]
+tinydb = {git = "https://github.com/ppolxda/tinydb",ref = "bulk_write"}
+
+[requires]
+python_version = "3.6"
