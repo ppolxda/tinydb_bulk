@@ -83,7 +83,7 @@ class TestMathFunc(unittest.TestCase):
 
     def test_ab_upsert_memory(self):
         with TinyDB(storage=MemoryStorage) as db:
-            self.upsert_bulk_test(db, 'json')
+            self.upsert_bulk_test(db, 'memory')
 
     def test_ba_upsert_json(self):
         try:

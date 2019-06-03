@@ -9,6 +9,7 @@
 import six
 # import bisect
 import hashlib
+from collections import deque
 from collections import defaultdict
 from tinydb import where
 from tinydb.database import TinyDB
@@ -89,10 +90,12 @@ class IndexTable(object):
     def __init__(self, index_model: IndexModel):
         assert isinstance(index_model, IndexModel)
         self.index_model = index_model
+        self.index_log = deque(maxlen=50)
         self.indexs_hashed = defaultdict(dict)
         self.indexs_uniques = set()
 
     def clear(self):
+        self.index_log = deque(maxlen=50)
         self.indexs_hashed = defaultdict(dict)
         self.indexs_uniques = set()
 
@@ -132,6 +135,9 @@ class IndexTable(object):
 
             self.indexs_hashed[key][val].add(new_doc)
 
+        # log upsert_one，to cmp index
+        self.index_log.append({'op': 'upsert_one', 'doc': doc})
+
     def find_hash_key(self, key, val):
         if key not in self.index_model.keys:
             return set()
@@ -150,17 +156,23 @@ class IndexsMrg(object):
         self.indexs = indexs
         for i in self.indexs:
             if not isinstance(i, IndexModel):
-                raise TypeError('indexs invaild')
+                raise InputError('indexs invaild')
 
         # self.datas = db.table('datas')
         self.indexs_tables = [IndexTable(i) for i in self.indexs]
         self.indexs_size = len(self.indexs_tables)
 
     def is_need_reindex(self):
-        # TODO - add log check
-        size_check = set(i for i in self.indexs_tables)
+        # size check
+        size_check = set(i.size() for i in self.indexs_tables)
         if len(size_check) != 1:
             return True
+
+        # log check
+        _begin = self.indexs_tables[0].index_log
+        for i in self.indexs_tables:
+            if _begin != i.index_log:
+                return True
         return False
 
     def get_index(self, index=0):
