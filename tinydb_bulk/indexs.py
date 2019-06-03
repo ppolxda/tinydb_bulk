@@ -111,19 +111,20 @@ class IndexTable(object):
 
         # check unique
         if self.index_model.unique and new_doc.hash in self.indexs_uniques:
-            raise DuplicateError('doc duplicate [{}]'.format(
-                self.index_model.name))
+            raise DuplicateError('doc duplicate [{}][key {}]'.format(
+                self.index_model.name, new_doc.doc))
 
         self.indexs_uniques.add(new_doc.hash)
 
         # TODO - SORT ASCENDING, DESCENDING
-        old_doc = self.indexs_hashed['_id'].get(_id, None)
-        if old_doc and new_doc.hash != old_doc.hash:
-            for key, val in old_doc.items():
-                if val not in self.indexs_hashed[key]:
-                    self.indexs_hashed[key][val] = set()
+        if self.indexs_hashed:
+            old_doc = self.indexs_hashed['_id'].get(_id, None)
+            if old_doc and new_doc.hash != old_doc.hash:
+                for key, val in old_doc.items():
+                    if val not in self.indexs_hashed[key]:
+                        self.indexs_hashed[key][val] = set()
 
-                self.indexs_hashed[key][val].remove(old_doc)
+                    self.indexs_hashed[key][val].remove(old_doc)
 
         for key, val in new_doc.doc.items():
             if val not in self.indexs_hashed[key]:
@@ -187,7 +188,7 @@ class IndexsMrg(object):
                 result.append(r)
                 break
 
-        return reduce(lambda x, y: x & y, result, set())
+        return reduce(lambda x, y: y if x is None else x & y, result, None)
 
     def reindex(self, docs):
         for i in self.indexs_tables:
