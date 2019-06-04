@@ -8,6 +8,7 @@ pep8 = "*"
 pylint = "*"
 autopep8 = "*"
 pytest = "*"
+coverage = "*"
 
 [packages]
 tinydb = {git = "https://github.com/ppolxda/tinydb",ref = "bulk_write"}
