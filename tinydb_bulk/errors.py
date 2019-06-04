@@ -18,3 +18,7 @@ class InputError(Error):
 
 class DuplicateError(Error):
     pass
+
+
+class IndexExpiredError(Error):
+    pass

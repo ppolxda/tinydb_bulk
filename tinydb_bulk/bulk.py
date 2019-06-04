@@ -11,7 +11,7 @@ import hashlib
 import itertools
 from tinydb.database import Table
 from .indexs import IndexsMrg
-from .errors import Error
+from .errors import Error, IndexExpiredError, InputError
 from . import mongo_op as mop
 
 reduce = six.moves.reduce
@@ -28,11 +28,20 @@ class TableBulk(object):
         self.reset()
 
     def find(self, _filter):
+        if not isinstance(_filter, dict):
+            raise InputError('_filter invaild')
+
         ids = self.indexs.find_hash_key(_filter)
-        datas = [self.datas.get(doc_id=_id._id) for _id in ids]
+        datas = [
+            self.datas.get(doc_id=_id._id)
+            for _id in ids
+        ]
         return datas
 
     def find_one(self, _filter):
+        if not isinstance(_filter, dict):
+            raise InputError('_filter invaild')
+
         ids = self.indexs.find_hash_key(_filter)
         if not ids:
             return None
@@ -41,6 +50,7 @@ class TableBulk(object):
         return data
 
     def __find_one(self, _filter):
+        # find index
         ids = self.indexs.find_hash_key(_filter)
         if not ids:
             return None
@@ -50,6 +60,17 @@ class TableBulk(object):
         return ids[0]._id, data
 
     def upsert_one(self, _filter, update):
+        if not isinstance(_filter, dict):
+            raise InputError('_filter invaild')
+
+        if not isinstance(update, dict):
+            raise InputError('_filter invaild')
+
+        # is indexs not same
+        if self.indexs.is_need_reindex():
+            self.reset()
+            raise IndexExpiredError('index expired')
+
         data = self.__find_one(_filter)
         if not data:
             _id = None
@@ -63,6 +84,11 @@ class TableBulk(object):
             data.update(_filter)
 
         for op, parames in update.items():
+            if not isinstance(parames, dict):
+                raise InputError('optype parames invaild[{}][{}]'.format(
+                    op, parames
+                ))
+
             if op == '$set':
                 data = mop.op_set(data, parames)
             elif op == '$unset':
@@ -75,12 +101,14 @@ class TableBulk(object):
                 data = mop.op_min(data, parames)
             elif op == '$inc':
                 data = mop.op_inc(data, parames)
+            elif op == '$addToSet':
+                data = mop.op_addtoset(data, parames)
             elif op == '$currentDate':
                 data = mop.op_datetime(data, parames)
             elif op == '$setOnInsert':
                 pass
             else:
-                raise TypeError('optype invaild')
+                raise InputError('optype invaild[{}]'.format(op))
 
         if _id:
             doc_id = _id
@@ -88,7 +116,6 @@ class TableBulk(object):
                 self.indexs.upsert_one(doc_id, data)
             except Error:
                 # rollback, only use unique
-                # TODO - too slow
                 self.reset()
                 raise
 
@@ -100,7 +127,6 @@ class TableBulk(object):
                 self.indexs.upsert_one(doc_id, data)
             except Error:
                 # rollback, only use unique
-                # TODO - too slow
                 self.reset()
                 raise
 
@@ -113,14 +139,6 @@ class TableBulk(object):
             self.reset()
 
     def reset(self):
+        # TODO - big file too slow
         self.bulk = self.datas.bulk()
         self.indexs.reindex(self.bulk.all())
-
-    # @staticmethod
-    # def make_key(vals):
-    #     assert isinstance(vals, dict, 'make_key vals invaild')
-    #     keys = [vals.keys()]
-    #     keys.sort()
-    #     _str = '_'.join(reduce(lambda x, y: x + [y, vals[y]], keys, []))
-    #     _str = _str.encode("latin-1")
-    #     return hashlib.md5(_str).hexdigest()

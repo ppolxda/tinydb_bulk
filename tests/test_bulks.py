@@ -33,7 +33,7 @@ def async_test(f):
 class TestMathFunc(unittest.TestCase):
     """Test mathfuc.py"""
 
-    RANGE_COUNT = 500
+    RANGE_COUNT = 10
     TEST_JSON_PATH = os.path.join(PYPATH, 'test.json')
 
     def upsert_tinydb_test(self, db, _type):
@@ -84,7 +84,7 @@ class TestMathFunc(unittest.TestCase):
 
     def test_ab_upsert_memory(self):
         with TinyDB(storage=MemoryStorage) as db:
-            self.upsert_bulk_test(db, 'json')
+            self.upsert_bulk_test(db, 'memory')
 
     def test_ba_upsert_json(self):
         try:

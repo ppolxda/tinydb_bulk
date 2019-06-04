@@ -72,6 +72,40 @@ class TestMathFunc(unittest.TestCase):
         except Exception as ex:
             self.assertIsInstance(ex, DuplicateError)
 
+    def test_c_indexs(self):
+        index_one = IndexModel([
+            ('i', HASHED),
+        ], True)
+
+        index_two = IndexModel([
+            ('a', ASCENDING),
+            ('b', DESCENDING),
+            ('c', DESCENDING),
+        ])
+
+        it_one = IndexsMrg([index_one, index_two])
+
+        for i in range(1000):
+            it_one.upsert_one(
+                i, {'i': i, 'a': i % 10, 'b': i * 2, 'c': i % 2}
+            )
+
+        result = it_one.find_hash_key({'a': 2, 'b': 4})
+        result = list(result)
+        self.assertEqual(len(result), 1)
+        self.assertEqual(result[0].doc['a'], 2)
+        self.assertEqual(result[0].doc['b'], 4)
+
+        result = it_one.find_hash_key({'a': 2, 'c': 0})
+        result = list(result)
+        self.assertEqual(len(result), 100)
+        self.assertEqual(result[0].doc['a'], 2)
+        self.assertEqual(result[0].doc['c'], 0)
+
+        result = it_one.find_hash_key({'a': 2, 'c': 1})
+        result = list(result)
+        self.assertEqual(len(result), 0)
+
 
 if __name__ == '__main__':
     unittest.main()

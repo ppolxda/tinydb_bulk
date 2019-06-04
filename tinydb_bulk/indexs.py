@@ -9,14 +9,15 @@
 import six
 # import bisect
 import hashlib
+from collections import deque
 from collections import defaultdict
 from tinydb import where
 from tinydb.database import TinyDB
 from tinydb.database import Table
+from .mongo_op import conv_doc2root
 from .errors import Error
 from .errors import InputError
 from .errors import DuplicateError
-
 try:
     import ujson as json
 except ImportError:
@@ -89,10 +90,12 @@ class IndexTable(object):
     def __init__(self, index_model: IndexModel):
         assert isinstance(index_model, IndexModel)
         self.index_model = index_model
+        self.index_log = deque(maxlen=50)
         self.indexs_hashed = defaultdict(dict)
         self.indexs_uniques = set()
 
     def clear(self):
+        self.index_log = deque(maxlen=50)
         self.indexs_hashed = defaultdict(dict)
         self.indexs_uniques = set()
 
@@ -106,30 +109,36 @@ class IndexTable(object):
         return self.size() <= 0
 
     def upsert_one(self, _id, doc):
-        new_doc = {key: doc.get(key, None) for key in self.index_model.keys}
+        # TODO - support array index, dict index
+        new_doc = {key: doc.get(key, None) for key in self.index_model.keys
+                   if not isinstance(doc.get(key, None), (list, dict))}
         new_doc = Document(_id, new_doc)
 
         # check unique
         if self.index_model.unique and new_doc.hash in self.indexs_uniques:
-            raise DuplicateError('doc duplicate [{}]'.format(
-                self.index_model.name))
+            raise DuplicateError('doc duplicate [{}][key {}]'.format(
+                self.index_model.name, new_doc.doc))
 
         self.indexs_uniques.add(new_doc.hash)
 
         # TODO - SORT ASCENDING, DESCENDING
-        old_doc = self.indexs_hashed['_id'].get(_id, None)
-        if old_doc and new_doc.hash != old_doc.hash:
-            for key, val in old_doc.items():
-                if val not in self.indexs_hashed[key]:
-                    self.indexs_hashed[key][val] = set()
+        if self.indexs_hashed:
+            old_doc = self.indexs_hashed['_id'].get(_id, None)
+            if old_doc and new_doc.hash != old_doc.hash:
+                for key, val in old_doc.items():
+                    if val not in self.indexs_hashed[key]:
+                        self.indexs_hashed[key][val] = set()
 
-                self.indexs_hashed[key][val].remove(old_doc)
+                    self.indexs_hashed[key][val].remove(old_doc)
 
         for key, val in new_doc.doc.items():
             if val not in self.indexs_hashed[key]:
                 self.indexs_hashed[key][val] = set()
 
             self.indexs_hashed[key][val].add(new_doc)
+
+        # log upsert_one，to cmp index
+        self.index_log.append({'op': 'upsert_one', 'doc': doc})
 
     def find_hash_key(self, key, val):
         if key not in self.index_model.keys:
@@ -149,17 +158,23 @@ class IndexsMrg(object):
         self.indexs = indexs
         for i in self.indexs:
             if not isinstance(i, IndexModel):
-                raise TypeError('indexs invaild')
+                raise InputError('indexs invaild')
 
         # self.datas = db.table('datas')
         self.indexs_tables = [IndexTable(i) for i in self.indexs]
         self.indexs_size = len(self.indexs_tables)
 
     def is_need_reindex(self):
-        # TODO - add log check
-        size_check = set(i for i in self.indexs_tables)
+        # size check
+        size_check = set(i.size() for i in self.indexs_tables)
         if len(size_check) != 1:
             return True
+
+        # log check
+        _begin = self.indexs_tables[0].index_log
+        for i in self.indexs_tables:
+            if _begin != i.index_log:
+                return True
         return False
 
     def get_index(self, index=0):
@@ -171,7 +186,12 @@ class IndexsMrg(object):
         _i = self.get_index(index)
         return _i.is_empty(0)
 
+    def clear(self):
+        for i in self.indexs_tables:
+            i.clear()
+
     def upsert_one(self, _id, doc):
+        doc = conv_doc2root(doc)
         for i in self.indexs_tables:
             i.upsert_one(_id, doc)
 
@@ -187,12 +207,9 @@ class IndexsMrg(object):
                 result.append(r)
                 break
 
-        return reduce(lambda x, y: x & y, result, set())
+        return reduce(lambda x, y: y if x is None else x & y, result, None)
 
     def reindex(self, docs):
-        for i in self.indexs_tables:
-            i.clear()
-
+        self.clear()
         for doc in docs:
-            for i in self.indexs_tables:
-                i.upsert_one(doc.doc_id, doc)
+            self.upsert_one(doc.doc_id, doc)
