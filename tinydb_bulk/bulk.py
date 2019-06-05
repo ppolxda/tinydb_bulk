@@ -49,14 +49,13 @@ class TableBulk(object):
         data = self.datas.get(doc_id=list(ids)[0]._id)
         return data
 
-    def __find_one(self, _filter):
+    def __find_one_in_bulk(self, _filter):
         # find index
         ids = self.indexs.find_hash_key(_filter)
         if not ids:
             return None
 
-        ids = list(ids)
-        data = self.datas.get(doc_id=ids[0]._id)
+        data = self.bulk.get(doc_id=list(ids)[0]._id)
         return ids[0]._id, data
 
     def upsert_one(self, _filter, update):
@@ -71,7 +70,7 @@ class TableBulk(object):
             self.reset()
             raise IndexExpiredError('index expired')
 
-        data = self.__find_one(_filter)
+        data = self.__find_one_in_bulk(_filter)
         if not data:
             _id = None
             data = {}

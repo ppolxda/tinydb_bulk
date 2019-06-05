@@ -46,14 +46,15 @@ class TestMathFunc(unittest.TestCase):
         # db = TinyDB(storage=MemoryStorage)
         it_one = IndexTable(index_one)
         it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
+        it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 5})
         try:
-            it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
+            it_one.upsert_one(2, {'a': 1, 'b': 2, 'i': 3})
         except Exception as ex:
             self.assertIsInstance(ex, DuplicateError)
 
         it_two = IndexTable(index_two)
         it_two.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
-        it_two.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
+        it_two.upsert_one(1, {'a': 1, 'b': 2, 'i': 5})
 
     def test_b_indexs(self):
         index_one = IndexModel([

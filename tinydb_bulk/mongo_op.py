@@ -35,7 +35,7 @@ def _op_rename(root, doc, oldkey, newkey):
     try:
         value = doc.pop(oldkey)
     except KeyError:
-        pass
+        raise InputError("Cannot found field '{}' in doc".format(oldkey))
     else:
         op_set(root, {newkey: value})
 
@@ -61,7 +61,7 @@ def _op_unset(doc, key, val):
     try:
         doc.pop(key)
     except KeyError:
-        pass
+        raise InputError("Cannot found field '{}' in doc".format(key))
 
 
 def op_unset(data, update):
@@ -71,7 +71,20 @@ def op_unset(data, update):
 
 
 def _op_max(doc, key, val):
+    if not isinstance(val,  (six.integer_types, float,
+                             six.string_types, six.binary_type)):
+        raise InputError(
+            'Cannot apply $max to a value of invaild type.'
+            'has the field {} of invaild type string'.format(key)
+        )
+
     if key in doc:
+        if not isinstance(doc[key],  (six.integer_types, float,
+                                      six.string_types, six.binary_type)):
+            raise InputError(
+                'Cannot apply $max to a value of invaild type.'
+                'has the field {} of invaild type string'.format(key)
+            )
         doc[key] = max(val, doc[key])
     else:
         doc[key] = val
@@ -84,7 +97,20 @@ def op_max(data, update):
 
 
 def _op_min(doc, key, val):
+    if not isinstance(val,  (six.integer_types, float,
+                             six.string_types, six.binary_type)):
+        raise InputError(
+            'Cannot apply $min to a value of invaild type.'
+            'has the field {} of invaild type string'.format(key)
+        )
+
     if key in doc:
+        if not isinstance(doc[key],  (six.integer_types, float,
+                                      six.string_types, six.binary_type)):
+            raise InputError(
+                'Cannot apply $min to a value of invaild type.'
+                'has the field {} of invaild type string'.format(key)
+            )
         doc[key] = min(val, doc[key])
     else:
         doc[key] = val
@@ -97,6 +123,12 @@ def op_min(data, update):
 
 
 def _op_inc(doc, key, val):
+    if not isinstance(val,  (six.integer_types, float)):
+        raise InputError(
+            'Cannot apply $inc to a value of non-numeric type.'
+            'has the field {} of non-numeric type string'.format(key)
+        )
+
     if key in doc:
         if not isinstance(doc[key], (six.integer_types, float)):
             raise InputError(
@@ -123,18 +155,28 @@ def _op_addtoset(data, key, val):
 
     if each:
         if not isinstance(val, list):
-            raise InputError('$addToSet invaild')
+            raise InputError('$each invaild')
 
-        if key not in data or \
-                not isinstance(data[key], list):
+        if key not in data:
             data[key] = []
+
+        if not isinstance(data[key], list):
+            raise InputError(
+                'Cannot apply $addToSet to a value of non-array type.'
+                'has the field {} of non-array type string'.format(key)
+            )
 
         append_list = [i for i in val if i not in data[key]]
         data[key] += append_list
     else:
-        if key not in data or \
-                not isinstance(data[key], list):
+        if key not in data:
             data[key] = []
+
+        if not isinstance(data[key], list):
+            raise InputError(
+                'Cannot apply $addToSet to a value of non-array type.'
+                'has the field {} of non-array type string'.format(key)
+            )
 
         if val not in data[key]:
             data[key].append(val)
@@ -167,7 +209,7 @@ def op_datetime(data, update):
 def __loop_doc2root(doc, prefix=None):
     for key, val in doc.items():
         if key.startswith('$') and key not in CONV_IGNORE_OP:
-            raise InputError('loop_doc2root not support op conv')
+            raise InputError('conv_doc2root not support op conv')
 
         if prefix:
             _prefix = '.'.join([prefix, key])
@@ -182,7 +224,7 @@ def __loop_doc2root(doc, prefix=None):
 
 def conv_doc2root(doc):
     if not isinstance(doc, dict):
-        raise InputError('loop_root2doc doc invaild')
+        raise InputError('conv_doc2root doc invaild')
     return {key: val for key, val in __loop_doc2root(doc)}
 
 
@@ -198,7 +240,7 @@ def __create_root2doc(doc, val, keys):
 
 def conv_root2doc(doc):
     if not isinstance(doc, dict):
-        raise InputError('loop_doc2root doc invaild')
+        raise InputError('conv_root2doc doc invaild')
 
     result = {}
     for key, val in doc.items():

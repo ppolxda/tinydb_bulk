@@ -41,11 +41,11 @@ class Document(object):
         self.doc = doc
         self.hash = self.__hash_doc(self.doc)
 
-    def to_dict(self):
-        return {
-            '_id': self._id,
-            'doc': self.doc,
-        }
+    # def to_dict(self):
+    #     return {
+    #         '_id': self._id,
+    #         'doc': self.doc,
+    #     }
 
     def __hash__(self):
         return hash(self.hash)
@@ -92,12 +92,10 @@ class IndexTable(object):
         self.index_model = index_model
         self.index_log = deque(maxlen=50)
         self.indexs_hashed = defaultdict(dict)
-        self.indexs_uniques = set()
 
     def clear(self):
         self.index_log = deque(maxlen=50)
         self.indexs_hashed = defaultdict(dict)
-        self.indexs_uniques = set()
 
     def size(self):
         return len(self.indexs_hashed['_id'])
@@ -108,6 +106,20 @@ class IndexTable(object):
     def is_empty(self):
         return self.size() <= 0
 
+    def is_duplicate(self, _id, doc):
+        if not self.index_model.unique:
+            return False
+
+        if isinstance(doc, Document):
+            new_doc = doc
+        else:
+            new_doc = {key: doc.get(key, None) for key in self.index_model.keys
+                       if not isinstance(doc.get(key, None), (list, dict))}
+            new_doc = Document(_id, new_doc)
+
+        has_hash = self.indexs_hashed['_hash'].get(new_doc.hash, None)
+        return has_hash and list(has_hash)[0]._id != _id
+
     def upsert_one(self, _id, doc):
         # TODO - support array index, dict index
         new_doc = {key: doc.get(key, None) for key in self.index_model.keys
@@ -115,28 +127,28 @@ class IndexTable(object):
         new_doc = Document(_id, new_doc)
 
         # check unique
-        if self.index_model.unique and new_doc.hash in self.indexs_uniques:
+        if self.is_duplicate(_id, new_doc):
             raise DuplicateError('doc duplicate [{}][key {}]'.format(
                 self.index_model.name, new_doc.doc))
-
-        self.indexs_uniques.add(new_doc.hash)
 
         # TODO - SORT ASCENDING, DESCENDING
         if self.indexs_hashed:
             old_doc = self.indexs_hashed['_id'].get(_id, None)
-            if old_doc and new_doc.hash != old_doc.hash:
-                for key, val in old_doc.items():
-                    if val not in self.indexs_hashed[key]:
-                        self.indexs_hashed[key][val] = set()
+            # _id must only one
+            if old_doc and new_doc.hash != list(old_doc)[0].hash:
+                old_doc = list(old_doc)[0]
+                for key, val in old_doc.doc.items():
+                    self._remove_indexs(key, val, old_doc)
 
-                    self.indexs_hashed[key][val].remove(old_doc)
+                self._remove_indexs('_id', old_doc._id, old_doc)
+                self._remove_indexs('_hash', old_doc.hash, old_doc)
 
         for key, val in new_doc.doc.items():
-            if val not in self.indexs_hashed[key]:
-                self.indexs_hashed[key][val] = set()
+            self._add_indexs(key, val, new_doc)
 
-            self.indexs_hashed[key][val].add(new_doc)
-
+        # add new index
+        self._add_indexs('_id', new_doc._id, new_doc)
+        self._add_indexs('_hash', new_doc.hash, new_doc)
         # log upsert_one，to cmp index
         self.index_log.append({'op': 'upsert_one', 'doc': doc})
 
@@ -150,6 +162,21 @@ class IndexTable(object):
         self.clear()
         for doc in docs:
             self.upsert_one(doc.doc_id, doc)
+
+    def _add_indexs(self, key, val, doc):
+        if val not in self.indexs_hashed[key]:
+            self.indexs_hashed[key][val] = set()
+
+        self.indexs_hashed[key][val].add(doc)
+
+    def _remove_indexs(self, key, val, doc):
+        if val not in self.indexs_hashed[key]:
+            self.indexs_hashed[key][val] = set()
+
+        self.indexs_hashed[key][val].remove(doc)
+
+        if not self.indexs_hashed[key][val]:
+            self.indexs_hashed[key].pop(val)
 
 
 class IndexsMrg(object):
@@ -185,6 +212,12 @@ class IndexsMrg(object):
     def is_empty(self, index=0):
         _i = self.get_index(index)
         return _i.is_empty(0)
+
+    def is_duplicate(self, _id, doc):
+        for i in self.indexs_tables:
+            if i.is_duplicate():
+                return True
+        return False
 
     def clear(self):
         for i in self.indexs_tables:
