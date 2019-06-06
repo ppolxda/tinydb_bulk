@@ -33,24 +33,14 @@ def async_test(f):
 class TestMathFunc(unittest.TestCase):
     """Test mathfuc.py"""
 
-    RANGE_COUNT = 10
+    RANGE_COUNT = 10000
     TEST_JSON_PATH = os.path.join(PYPATH, 'test.json')
 
-    def upsert_tinydb_test(self, db, _type):
-        start = time.time()
-        table = db.table('test')
+    # ----------------------------------------------
+    #        real test
+    # ----------------------------------------------
 
-        for i in range(self.RANGE_COUNT):
-            table.upsert(
-                {'i': i, 'a': i % 2, 'b': i * 2},
-                where('i') == i
-            )
-
-        interval = time.time() - start
-        print('tinydb {} upsert: {} sec'.format(_type, interval))
-        db.close()
-
-    def upsert_bulk_test(self, db, _type):
+    def test_bulk(self):
         start = time.time()
         index_one = IndexModel([
             ('i', HASHED),
@@ -61,7 +51,8 @@ class TestMathFunc(unittest.TestCase):
             ('b', DESCENDING),
         ])
 
-        # db = TinyDB(storage=MemoryStorage)
+        _type = 'json'
+        db = TinyDB('./tests/test.json')
         table = TableBulk([index_one, index_two], db.table('test'))
 
         for i in range(self.RANGE_COUNT):
@@ -78,31 +69,32 @@ class TestMathFunc(unittest.TestCase):
         print('bulk {} upsert flush: {} sec'.format(_type, interval))
         db.close()
 
-    def test_aa_upsert_memory(self):
-        with TinyDB(storage=MemoryStorage) as db:
-            self.upsert_tinydb_test(db, 'memory')
+    # def test_bulk(self):
+    #     start = time.time()
+    #     index_one = IndexModel([
+    #         ('i', HASHED),
+    #     ], True)
 
-    def test_ab_upsert_memory(self):
-        with TinyDB(storage=MemoryStorage) as db:
-            self.upsert_bulk_test(db, 'memory')
+    #     index_two = IndexModel([
+    #         ('a', ASCENDING),
+    #         ('b', DESCENDING),
+    #     ])
 
-    def test_ba_upsert_json(self):
-        try:
-            os.remove(self.TEST_JSON_PATH)
-        except Exception as ex:
-            print(ex)
+    #     _type = 'json'
+    #     db = TinyDB('./tests/test.json')
+    #     table = TableBulk([index_one, index_two], db.table('test'))
+    #     from collections import defaultdict
+    #     docs = defaultdict(dict)
+    #     for i in range(self.RANGE_COUNT):
+    #         docs[i].update({'i': i, 'a': i % 2, 'b': i * 2})
 
-        with TinyDB(self.TEST_JSON_PATH) as db:
-            self.upsert_tinydb_test(db, 'json')
+    #     interval = time.time() - start
+    #     print('bulk {} upsert: {} sec'.format(_type, interval))
 
-    def test_bb_upsert_json(self):
-        try:
-            os.remove(self.TEST_JSON_PATH)
-        except Exception as ex:
-            print(ex)
-
-        with TinyDB(self.TEST_JSON_PATH) as db:
-            self.upsert_bulk_test(db, 'json')
+    #     table.flush()
+    #     interval = time.time() - start
+    #     print('bulk {} upsert flush: {} sec'.format(_type, interval))
+    #     db.close()
 
 
 if __name__ == '__main__':

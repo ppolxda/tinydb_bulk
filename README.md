@@ -2,15 +2,14 @@
 
 ## tinydb_bulk test
 
-```shell
+```bash
+REM 'upsert 1000 count'
 python demo/demo_print_bulk.py
 
-tinydb memory upsert: 1.7379908561706543 sec
-bulk memory upsert: 0.6560075283050537 sec
-bulk memory upsert flush: 0.7590103149414062 sec
-tinydb json upsert: 29.756213665008545 sec
-bulk json upsert: 0.6801221370697021 sec
-bulk json upsert flush: 0.8031060695648193 sec
+bulk memory upsert: 0.7019836902618408 sec
+bulk memory upsert flush: 0.6400115489959717 sec
+bulk json upsert: 0.7261338233947754 sec
+bulk json upsert flush: 0.6671342849731445 sec
 ```
 
 ## tinydb_bulk demo

@@ -17,7 +17,7 @@ except ImportError:
 PYPATH = os.path.abspath(os.path.dirname(__file__))
 
 
-RANGE_COUNT = 500
+RANGE_COUNT = 1000
 TEST_JSON_PATH = os.path.join(PYPATH, 'test.json')
 
 
@@ -58,6 +58,8 @@ def upsert_bulk_test(db, _type):
     interval = time.time() - start
     print('bulk {} upsert: {} sec'.format(_type, interval))
 
+    start = time.time()
+
     table.flush()
     interval = time.time() - start
     print('bulk {} upsert flush: {} sec'.format(_type, interval))
@@ -96,9 +98,9 @@ def upsert_bulk_json():
 
 def main():
     for func in [
-        upsert_memory,
+        # upsert_memory,
         upser_bulk_memory,
-        upsert_json,
+        # upsert_json,
         upsert_bulk_json
     ]:
         func()

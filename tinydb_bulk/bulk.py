@@ -31,7 +31,7 @@ class TableBulk(object):
         if not isinstance(_filter, dict):
             raise InputError('_filter invaild')
 
-        ids = self.indexs.find_hash_key(_filter)
+        ids = self.indexs.find_hash(_filter)
         datas = [
             self.datas.get(doc_id=_id._id)
             for _id in ids
@@ -42,23 +42,24 @@ class TableBulk(object):
         if not isinstance(_filter, dict):
             raise InputError('_filter invaild')
 
-        ids = self.indexs.find_hash_key(_filter)
+        ids = self.indexs.find_hash(_filter)
         if not ids:
             return None
 
-        data = self.datas.get(doc_id=list(ids)[0]._id)
+        data = self.datas.get(doc_id=next(iter(ids))._id)
         return data
 
-    def __find_one_in_bulk(self, _filter):
-        # find index
-        ids = self.indexs.find_hash_key(_filter)
+    def __find_one_in_bulk(self, _filter, index=-1):
+        # find hash
+        ids = self.indexs.find_hash(_filter)
         if not ids:
             return None
 
-        data = self.bulk.get(doc_id=list(ids)[0]._id)
-        return ids[0]._id, data
+        _id = next(iter(ids))
+        data = self.bulk.get(doc_id=_id._id)
+        return _id._id, data
 
-    def upsert_one(self, _filter, update):
+    def upsert_one(self, _filter, update, index=-1):
         if not isinstance(_filter, dict):
             raise InputError('_filter invaild')
 
@@ -70,17 +71,16 @@ class TableBulk(object):
             self.reset()
             raise IndexExpiredError('index expired')
 
-        data = self.__find_one_in_bulk(_filter)
+        data = self.__find_one_in_bulk(_filter, index)
         if not data:
             _id = None
             data = {}
+            data.update(_filter)
+            if '$setOnInsert' in update:
+                data.update(update['$setOnInsert'])
         else:
             _id = data[0]
             data = data[1]
-
-        if '$setOnInsert' in update and not data:
-            data.update(update['$setOnInsert'])
-            data.update(_filter)
 
         for op, parames in update.items():
             if not isinstance(parames, dict):
