@@ -88,13 +88,11 @@ class Document(object):
     #     }
 
     def __hash__(self):
-        return hash(self.hash)
+        return self.hash
 
     @staticmethod
     def __hash_doc(doc):
-        return hashlib.md5(six.b(
-            json.dumps(doc, sort_keys=True)
-        )).hexdigest()
+        return hash(frozenset(doc.items()))
 
 
 class IndexModel(object):
@@ -138,11 +136,11 @@ class IndexTable(object):
         self.indexs_hashed = defaultdict(dict)
 
     def create_doc(self, _id, doc):
-        new_doc = OrderedDict([
-            (key, doc.get(key, None))
+        new_doc = {
+            key: doc.get(key, None)
             for key in self.index_model.keys_sort
             if not isinstance(doc.get(key, None), (list, dict))
-        ])
+        }
         return Document(_id, new_doc)
 
     def clear(self):
@@ -174,47 +172,13 @@ class IndexTable(object):
         # check unique
         if self.is_duplicate(_id, new_doc):
             raise DuplicateError('doc duplicate [{}][key {}]'.format(
-                self.index_model.name, new_doc.doc))
+                self.index_model.name, doc))
 
         # TODO - SORT ASCENDING, DESCENDING
-        if self.indexs_hashed:
-            old_doc = self.indexs_hashed['_id'].get(_id, None)
-            # _id must only one
-            if old_doc and new_doc.hash != next(iter(old_doc)).hash:
-                keys = []
-                vals = []
-                old_doc = next(iter(old_doc))
-                for key, val in old_doc.doc.items():
-                    keys.append(key)
-                    vals.append(str(val))
-
-                    self._remove_indexs(
-                        '_'.join(keys),
-                        '_'.join(vals),
-                        old_doc
-                    )
-                    self._remove_indexs(key, val, old_doc)
-
-                self._remove_indexs('_id', old_doc._id, old_doc)
-                self._remove_indexs('_hash', old_doc.hash, old_doc)
-
-        keys = []
-        vals = []
-        for key, val in new_doc.doc.items():
-            keys.append(key)
-            vals.append(str(val))
-            self._add_indexs(
-                '_'.join(keys),
-                '_'.join(vals),
-                new_doc
-            )
-            self._add_indexs(key, val, new_doc)
-
-        # add new index
-        self._add_indexs('_id', new_doc._id, new_doc)
-        self._add_indexs('_hash', new_doc.hash, new_doc)
+        self._upsert_doc(new_doc)
         # log upsert_one，to cmp index
-        self.index_log.append({'op': 'upsert_one', 'doc': doc})
+        # TODO - log too slow
+        # self.index_log.append({'op': 'upsert_one', 'doc': doc})
 
     def hint_keys(self, keys):
         result = []
@@ -270,6 +234,63 @@ class IndexTable(object):
         if not self.indexs_hashed[key][val]:
             self.indexs_hashed[key].pop(val)
 
+    def _upsert_doc(self, new_doc):
+        add_doc = True
+        while True:
+            if not self.indexs_hashed:
+                break
+
+            old_doc = self.indexs_hashed['_id'].get(new_doc._id, None)
+            if not old_doc:
+                break
+
+            old_doc = next(iter(old_doc))
+            if new_doc.hash == old_doc.hash:
+                add_doc = False
+                break
+
+            # _id must only one
+            self._remove_doc(old_doc)
+
+        if add_doc:
+            self._add_doc(new_doc)
+
+    def _add_doc(self, new_doc):
+        keys = []
+        vals = []
+        for key in self.index_model.keys_sort:
+            val = new_doc.doc[key]
+            keys.append(key)
+            vals.append(str(val))
+            self._add_indexs(
+                '_'.join(keys),
+                '_'.join(vals),
+                new_doc
+            )
+            self._add_indexs(key, val, new_doc)
+
+        # add new index
+        self._add_indexs('_id', new_doc._id, new_doc)
+        self._add_indexs('_hash', new_doc.hash, new_doc)
+
+    def _remove_doc(self, old_doc):
+        keys = []
+        vals = []
+        for key in self.index_model.keys_sort:
+            val = old_doc.doc[key]
+            keys.append(key)
+            vals.append(str(val))
+
+            self._remove_indexs(
+                '_'.join(keys),
+                '_'.join(vals),
+                old_doc
+            )
+            self._remove_indexs(key, val, old_doc)
+
+        self._remove_indexs('_id', old_doc._id, old_doc)
+        self._remove_indexs('_hash', old_doc.hash, old_doc)
+
 
 class IndexsMrg(object):
 
@@ -290,11 +311,12 @@ class IndexsMrg(object):
         if len(size_check) != 1:
             return True
 
+        # TODO - log too slow
         # log check
-        _begin = self.indexs_tables[0].index_log
-        for i in self.indexs_tables:
-            if _begin != i.index_log:
-                return True
+        # _begin = self.indexs_tables[0].index_log
+        # for i in self.indexs_tables:
+        #     if _begin != i.index_log:
+        #         return True
         return False
 
     def get_index(self, index=0):

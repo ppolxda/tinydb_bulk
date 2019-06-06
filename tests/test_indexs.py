@@ -52,9 +52,11 @@ class TestMathFunc(unittest.TestCase):
         it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
         it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 5})
         try:
-            it_one.upsert_one(2, {'a': 1, 'b': 2, 'i': 3})
+            it_one.upsert_one(2, {'a': 1, 'b': 2, 'i': 5})
         except Exception as ex:
             self.assertIsInstance(ex, DuplicateError)
+        else:
+            self.assertTrue(False)
 
         it_two = IndexTable(index_two)
         it_two.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
@@ -73,9 +75,11 @@ class TestMathFunc(unittest.TestCase):
         it_one = IndexsMrg([index_one, index_two])
         it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
         try:
-            it_one.upsert_one(1, {'a': 1, 'b': 2, 'i': 3})
+            it_one.upsert_one(2, {'a': 1, 'b': 2, 'i': 3})
         except Exception as ex:
             self.assertIsInstance(ex, DuplicateError)
+        else:
+            self.assertTrue(False)
 
     def test_c_indexs(self):
         index_one = IndexModel([

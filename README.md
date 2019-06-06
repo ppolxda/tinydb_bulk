@@ -6,10 +6,10 @@
 REM 'upsert 1000 count'
 python demo/demo_print_bulk.py
 
-bulk memory upsert: 0.7019836902618408 sec
-bulk memory upsert flush: 0.6400115489959717 sec
-bulk json upsert: 0.7261338233947754 sec
-bulk json upsert flush: 0.6671342849731445 sec
+bulk memory upsert: 0.04400014877319336 sec
+bulk memory upsert flush: 0.05500054359436035 sec
+bulk json upsert: 0.04799938201904297 sec
+bulk json upsert flush: 0.06200003623962402 sec
 ```
 
 ## tinydb_bulk demo

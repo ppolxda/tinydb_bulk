@@ -154,32 +154,39 @@ def _op_addtoset(data, key, val):
         val = val['$each']
 
     if each:
-        if not isinstance(val, list):
+        if not isinstance(val, (list, set)):
             raise InputError('$each invaild')
 
         if key not in data:
-            data[key] = []
+            data[key] = set()
 
-        if not isinstance(data[key], list):
+        # list to slow use set
+        if isinstance(data[key], list):
+            data[key] = set(data[key])
+
+        if not isinstance(data[key], (list, set)):
             raise InputError(
                 'Cannot apply $addToSet to a value of non-array type.'
                 'has the field {} of non-array type string'.format(key)
             )
 
-        append_list = [i for i in val if i not in data[key]]
-        data[key] += append_list
+        data[key] |= set(val)
     else:
         if key not in data:
-            data[key] = []
+            data[key] = set()
 
-        if not isinstance(data[key], list):
+        # list to slow use set
+        if isinstance(data[key], list):
+            data[key] = set(data[key])
+
+        if not isinstance(data[key], (list, set)):
             raise InputError(
                 'Cannot apply $addToSet to a value of non-array type.'
                 'has the field {} of non-array type string'.format(key)
             )
 
         if val not in data[key]:
-            data[key].append(val)
+            data[key].add(val)
 
 
 def op_addtoset(data, update):

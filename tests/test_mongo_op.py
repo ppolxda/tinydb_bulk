@@ -40,12 +40,16 @@ class TestMathFunc(unittest.TestCase):
         except Exception as ex:
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find('conv_root2doc doc invaild') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             new_doc = mp.conv_doc2root('asdasdas')
         except Exception as ex:
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find('conv_doc2root doc invaild') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             new_doc = mp.conv_doc2root({'$asd': ''})
@@ -53,6 +57,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'conv_doc2root not support op conv') >= 0)
+        else:
+            self.assertTrue(False)
 
     def test_z_op_set(self):
         doc = {}
@@ -74,11 +80,13 @@ class TestMathFunc(unittest.TestCase):
 
         mp.op_set(doc, {'ii': 'asdasd'})
         try:
-            mp.op_inc(doc, {'i': 3})
+            mp.op_inc(doc, {'ii': 3})
         except Exception as ex:
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $inc to a value of non-numeric type.') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             mp.op_inc({}, {'i': 'asdasd'})
@@ -86,6 +94,9 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $inc to a value of non-numeric type.') >= 0)
+        else:
+            self.assertTrue(False)
+
         try:
             doc = {}
             mp.op_set(doc, {'i': 'asdasd'})
@@ -94,6 +105,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $inc to a value of non-numeric type.') >= 0)
+        else:
+            self.assertTrue(False)
 
     def test_z_op_max(self):
         doc = {}
@@ -111,6 +124,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $max to a value of invaild type.') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             mp.op_max({}, {'ii': []})
@@ -118,6 +133,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $max to a value of invaild type.') >= 0)
+        else:
+            self.assertTrue(False)
 
     def test_z_op_min(self):
         doc = {}
@@ -135,6 +152,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $min to a value of invaild type.') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             mp.op_min({}, {'ii': []})
@@ -142,6 +161,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $min to a value of invaild type.') >= 0)
+        else:
+            self.assertTrue(False)
 
     def test_z_op_unset(self):
         try:
@@ -150,6 +171,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot found field') >= 0)
+        else:
+            self.assertTrue(False)
 
         doc = {'j': 122}
         mp.op_unset(doc, {'j': ''})
@@ -162,6 +185,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot found field') >= 0)
+        else:
+            self.assertTrue(False)
 
         doc = {'h': 6}
         mp.op_rename(doc, {'h': 'j'})
@@ -178,6 +203,8 @@ class TestMathFunc(unittest.TestCase):
         except Exception as ex:
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find('Cannot create field') >= 0)
+        else:
+            self.assertTrue(False)
 
         mp.op_set(doc, {'a.a': 5})
         self.assertEqual(doc['a']['a'], 5)
@@ -205,11 +232,13 @@ class TestMathFunc(unittest.TestCase):
         mp.op_inc(doc, {'i.b.i': 3})
         self.assertEqual(doc['i']['b']['i'], 5)
         try:
-            mp.op_inc(doc, {'a.b.a': 3})
+            mp.op_inc(doc, {'a.b.a': "asdsad"})
         except Exception as ex:
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $inc to a value of non-numeric type.') >= 0)
+        else:
+            self.assertTrue(False)
 
         mp.op_max(doc, {'h.h': 5})
         self.assertEqual(doc['h']['h'], 5)
@@ -289,6 +318,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 '$each invaild') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             doc = {}
@@ -298,6 +329,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $addToSet to a value of non-array type.') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             doc = {}
@@ -307,6 +340,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $addToSet to a value of non-array type.') >= 0)
+        else:
+            self.assertTrue(False)
 
         try:
             doc = {}
@@ -316,6 +351,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'Cannot apply $addToSet to a value of non-array type.') >= 0)
+        else:
+            self.assertTrue(False)
 
     def test_z_op_datetime(self):
         doc = {}
@@ -339,6 +376,8 @@ class TestMathFunc(unittest.TestCase):
             self.assertIsInstance(ex, mp.InputError)
             self.assertTrue(str(ex).find(
                 'op_datetime $type invaild') >= 0)
+        else:
+            self.assertTrue(False)
 
 
 if __name__ == '__main__':
