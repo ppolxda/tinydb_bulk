@@ -75,39 +75,12 @@ class TableBulk(object):
         if not data:
             _id = None
             data = {}
+            mop.op_update(data, update)
             data.update(_filter)
-            if '$setOnInsert' in update:
-                data.update(update['$setOnInsert'])
         else:
             _id = data[0]
             data = data[1]
-
-        for op, parames in update.items():
-            if not isinstance(parames, dict):
-                raise InputError('optype parames invaild[{}][{}]'.format(
-                    op, parames
-                ))
-
-            if op == '$set':
-                data = mop.op_set(data, parames)
-            elif op == '$unset':
-                data = mop.op_unset(data, parames)
-            elif op == '$rename':
-                data = mop.op_rename(data, parames)
-            elif op == '$max':
-                data = mop.op_max(data, parames)
-            elif op == '$min':
-                data = mop.op_min(data, parames)
-            elif op == '$inc':
-                data = mop.op_inc(data, parames)
-            elif op == '$addToSet':
-                data = mop.op_addtoset(data, parames)
-            elif op == '$currentDate':
-                data = mop.op_datetime(data, parames)
-            elif op == '$setOnInsert':
-                pass
-            else:
-                raise InputError('optype invaild[{}]'.format(op))
+            mop.op_update(data, update)
 
         if _id:
             doc_id = _id

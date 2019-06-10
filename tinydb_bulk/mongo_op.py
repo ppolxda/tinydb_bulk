@@ -213,6 +213,43 @@ def op_datetime(data, update):
     return data
 
 
+def op_update(data, update):
+    # when doc is null
+    if not data and '$setOnInsert' in update:
+        data.update(update['$setOnInsert'])
+
+    for op, parames in update.items():
+        if not isinstance(parames, dict):
+            raise InputError('optype parames invaild[{}][{}]'.format(
+                op, parames
+            ))
+
+        if op == '$set':
+            data = op_set(data, parames)
+        elif op == '$unset':
+            data = op_unset(data, parames)
+        elif op == '$rename':
+            data = op_rename(data, parames)
+        elif op == '$max':
+            data = op_max(data, parames)
+        elif op == '$min':
+            data = op_min(data, parames)
+        elif op == '$inc':
+            data = op_inc(data, parames)
+        elif op == '$addToSet':
+            data = op_addtoset(data, parames)
+        elif op == '$currentDate':
+            data = op_datetime(data, parames)
+        elif op == '$setOnInsert':
+            pass
+        else:
+            raise InputError('optype invaild[{}]'.format(op))
+
+# ----------------------------------------------
+#        doc conv
+# ----------------------------------------------
+
+
 def __loop_doc2root(doc, prefix=None):
     for key, val in doc.items():
         if key.startswith('$') and key not in CONV_IGNORE_OP:
